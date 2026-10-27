@@ -2,6 +2,9 @@
   "name": "pick-assistant",
   "main": "worker.js",
   "compatibility_date": "2026-10-01",
+  "vars": {
+    "DIFY_API_BASE": "https://api.dify.ai/v1"
+  },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
