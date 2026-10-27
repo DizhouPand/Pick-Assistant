@@ -27,7 +27,7 @@ pnpm dev
 | want | 只要文案 / 文案 + 配图 / 文案 + 配图 + 视频 |
 | shot | 选填，最多 500 字 |
 
-服务端解析 `data.outputs.result`（JSON 字符串），读取 `xhs.title/body/tags`、`douyin.script`、`detail.headline/points/price`，并接入 `image_url`、`video_url`、`verdict`、`reason`、`error`。图片/视频为空时保留独立状态与错误提示。媒体生成耗时较长，正式集成应使用流式工作流执行并显示阶段进度。
+服务端解析 `data.outputs.result`（JSON 字符串），读取 `xhs.title/body/tags`、`douyin.script`、`detail.headline/points/price`，并接入 `image_url`、`video_url`、`verdict`、`reason`、`error`。图片/视频为空时保留独立状态与错误提示。Cloudflare 使用流式工作流执行，以支持较长的生成时间。
 
 原始 DSL 含服务密钥，未复制到本项目。密钥不得放到 React、VITE_ 环境变量、静态资源或 Git 中。服务端通过环境变量保存应用级 Dify 密钥。
 
@@ -37,7 +37,7 @@ pnpm dev
 
 ## 本机试运行与 Vercel
 
-在项目目录先执行 `npm run build`，再执行 `node dev-server.js`，打开 http://localhost:3002。服务启动时读取同目录的 `local.env`；请自行填写 Dify API 密钥，切勿提交该文件。Vercel 部署使用根目录 `index.html`、构建产物 `dist` 与 `api/generate.js`，请在 Vercel 项目环境变量中配置 `DIFY_API_BASE` 和 `DIFY_API_KEY`。网页只调用自己的 `/api/generate`，由服务端调用 Dify 的工作流接口。工作流使用阻塞模式，长时间运行可能超时，图片和视频需由工作流返回可访问的链接。
+在项目目录先执行 `npm run build`，再执行 `node dev-server.js`，打开 http://localhost:3002。服务启动时读取同目录的 `local.env`；请自行填写 Dify API 密钥，切勿提交该文件。Vercel 部署使用根目录 `index.html`、构建产物 `dist` 与 `api/generate.js`，请在 Vercel 项目环境变量中配置 `DIFY_API_BASE` 和 `DIFY_API_KEY`。网页只调用自己的 `/api/generate`，由服务端调用 Dify 的工作流接口。本机服务和 Vercel 接口使用阻塞模式，长时间运行可能超时；Cloudflare Worker 使用流式响应，最长等待 10 分钟，期间需保持网页打开。图片和视频需由工作流返回可访问的链接。
 
 ## Cloudflare Workers 部署
 

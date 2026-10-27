@@ -16,11 +16,15 @@ export default async function handler(req, res, env = process.env) {
     if (!response.ok) return send(502, { error: '生成服务暂时不可用，请稍后重试。' });
     const payload = await response.json();
     if (payload.data?.status !== 'succeeded') return send(502, { error: '生成未完成，请稍后重试。' });
-    const output = payload.data?.outputs?.result;
-    const parsed = typeof output === 'string' ? JSON.parse(output) : output;
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Invalid output');
-    const text = value => typeof value === 'string' ? value.split(key).join('[已隐藏]') : '';
-    const url = value => { try { const u = new URL(value); return ['https:', 'http:'].includes(u.protocol) && !u.href.includes(key) ? u.href : ''; } catch { return ''; } };
-    return send(200, { result: { verdict: text(parsed.verdict), reason: text(parsed.reason), error: text(parsed.error), xhs: { title: text(parsed.xhs?.title), body: text(parsed.xhs?.body), tags: Array.isArray(parsed.xhs?.tags) ? parsed.xhs.tags.filter(x => typeof x === 'string').map(text).join(' ') : text(parsed.xhs?.tags) }, douyin: { script: text(parsed.douyin?.script) }, detail: { headline: text(parsed.detail?.headline), points: Array.isArray(parsed.detail?.points) ? parsed.detail.points.filter(x => typeof x === 'string').map(text) : [], price: text(parsed.detail?.price) }, image_url: url(parsed.image_url), video_url: url(parsed.video_url), video_desc: text(parsed.video_desc) } });
+    return send(200, normalizeOutputs(payload.data?.outputs, key));
   } catch { return send(502, { error: '生成失败，请稍后重试。' }); }
+}
+
+export function normalizeOutputs(outputs, key) {
+  const output = outputs?.result;
+  const parsed = typeof output === 'string' ? JSON.parse(output) : output;
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Invalid output');
+  const text = value => typeof value === 'string' ? value.split(key).join('[已隐藏]') : '';
+  const url = value => { try { const u = new URL(value); return ['https:', 'http:'].includes(u.protocol) && !u.href.includes(key) ? u.href : ''; } catch { return ''; } };
+  return { result: { verdict: text(parsed.verdict), reason: text(parsed.reason), error: text(parsed.error), xhs: { title: text(parsed.xhs?.title), body: text(parsed.xhs?.body), tags: Array.isArray(parsed.xhs?.tags) ? parsed.xhs.tags.filter(x => typeof x === 'string').map(text).join(' ') : text(parsed.xhs?.tags) }, douyin: { script: text(parsed.douyin?.script) }, detail: { headline: text(parsed.detail?.headline), points: Array.isArray(parsed.detail?.points) ? parsed.detail.points.filter(x => typeof x === 'string').map(text) : [], price: text(parsed.detail?.price) }, image_url: url(parsed.image_url), video_url: url(parsed.video_url), video_desc: text(parsed.video_desc) } };
 }
