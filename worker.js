@@ -28,11 +28,12 @@ export default {
     let reader;
     const stream = new ReadableStream({
       async start(controller) {
-        const send = value => controller.enqueue(encoder.encode(`data: ${JSON.stringify(value)}\n\n`));
+        const send = value => controller.enqueue(encoder.encode(JSON.stringify(value)));
+        const keepAlive = () => controller.enqueue(encoder.encode(' '));
         let heartbeat;
         try {
-          send({ type: 'progress' });
-          heartbeat = setInterval(() => { try { send({ type: 'progress' }); } catch { abort.abort(); } }, 15000);
+          keepAlive();
+          heartbeat = setInterval(() => { try { keepAlive(); } catch { abort.abort(); } }, 15000);
           reader = upstream.body.getReader();
           const decoder = new TextDecoder();
           let buffer = '', finished = false;
@@ -42,10 +43,10 @@ export default {
             const event = JSON.parse(data);
             if (event.event === 'workflow_finished') {
               finished = true;
-              if (event.data?.status !== 'succeeded') send({ type: 'error', error: '工作流未完成，请稍后重试。' });
-              else send({ type: 'result', ...normalizeOutputs(event.data.outputs, key) });
+              if (event.data?.status !== 'succeeded') send({ error: '工作流未完成，请稍后重试。' });
+              else send(normalizeOutputs(event.data.outputs, key));
             } else if (event.event === 'error' || event.event === 'workflow_paused') {
-              finished = true; send({ type: 'error', error: '工作流未完成，请在 Dify 中检查运行状态。' });
+              finished = true; send({ error: '工作流未完成，请在 Dify 中检查运行状态。' });
             }
           };
           while (!finished) {
@@ -56,12 +57,12 @@ export default {
             while ((match = /\r?\n\r?\n/.exec(buffer))) { const eventText = buffer.slice(0, match.index); buffer = buffer.slice(match.index + match[0].length); consume(eventText); if (finished) break; }
             if (done) { if (buffer.trim() && !finished) consume(buffer); break; }
           }
-          if (!finished) send({ type: 'error', error: '连接已中断，请先到 Dify 日志查看本次运行结果。' });
-        } catch { try { send({ type: 'error', error: '连接已中断或等待超时，请先到 Dify 日志查看本次运行结果。' }); } catch {} }
+          if (!finished) send({ error: '连接已中断，请先到 Dify 日志查看本次运行结果。' });
+        } catch { try { send({ error: '连接已中断或等待超时，请先到 Dify 日志查看本次运行结果。' }); } catch {} }
         finally { clearInterval(heartbeat); clearTimeout(timeout); try { await reader?.cancel(); } catch {} try { controller.close(); } catch {} }
       },
       cancel() { clearTimeout(timeout); abort.abort(); reader?.cancel().catch(() => {}); }
     });
-    return new Response(stream, { headers: { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-store', 'X-Accel-Buffering': 'no' } });
+    return new Response(stream, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Accel-Buffering': 'no' } });
   }
 };
